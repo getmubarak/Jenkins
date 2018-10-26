@@ -1,0 +1,43 @@
+chmod 777 /var/run/docker.sock
+
+Go to jenkins home
+->click on “credentials”
+-->“(global)”
+--->Click on “Add Credentials” in left menu.
+------>put “dockerhub” in Credential ID.
+ 
+pipeline {
+  environment {
+    registry = "getmub/abc"
+    registryCredential = 'dockerhub'
+  }
+  agent any
+  stages {
+    stage('Cloning Git') {
+      steps {
+        git "file:////home/ubuntu/hello"
+      }
+    }
+    stage('Building image') {
+      steps{
+        script {
+          app= docker.build (registry + ":$BUILD_NUMBER")
+        }
+      }
+    }
+    stage('Deploy Image') {
+      steps{
+           script {
+         /* Finally, we'll push the image with two tags:
+         * First, the incremental build number from Jenkins
+         * Second, the 'latest' tag.
+         * Pushing multiple tags is cheap, as all the layers are reused. */
+        docker.withRegistry('https://registry.hub.docker.com', 'dockerhub') {
+            app.push("${env.BUILD_NUMBER}")
+            app.push("latest")
+        }
+           }
+      }
+    }
+  }
+}
